@@ -61,15 +61,15 @@ def plot_geometry(rDebris, zDebris):
     
 
     # Adding the "Wasser" background as a label in the legend
-    ax.fill_betweenx([0, 5], 0, 4.4, color='lightblue', alpha=0.5, label='Wasser')
+    ax.fill_betweenx([0, 5], 0, 4.4, color='lightblue', alpha=0.5, label='Water')
         # Plot the debris shape
-    ax.fill(rDebris, zDebris, color='red', alpha=0.5, edgecolor='black', label='Schüttbett')
+    ax.fill(rDebris, zDebris, facecolor='red', alpha=0.5, edgecolor='black', label='Debris Bed')
     
     # Define the block region (example: between r = 1.0 and r = 2.0)
     block_start = 3.35  # ['3.35', ' 4.4', ' 4.4', ' 3.35']
     block_end = 4.4
     ax.fill_betweenx(
-        [0, 1], block_start, block_end, color='grey', alpha=0.9, label='Block'
+        [0, 1], block_start, block_end, color='grey', alpha=0.9, label='Structural Block'
     )
 
     
@@ -98,64 +98,69 @@ def load_models():
 
 def load_classifier():
     # Load the saved model
-    return joblib.load("Voting Classifier.pkl")
+    return joblib.load("OptimizedVotingClassifier.pkl")
 
 
 @st.cache_resource
 def load_scaler_X():
-    return joblib.load("MinMaxScaler_X.pkl")
+    return joblib.load("MinMax_scaler_X_Classification.pkl")
 
-@st.cache_resource
-def load_scaler_y():
-    return joblib.load("MinMaxScaler_y.pkl")
+
+def scaler_y(value):
+    value =  np.log1p(value)
+    return value
+
+def inverse_scaler_y(value):
+    value = np.expm1(value)
+    return value
 
 models = load_models()
 scaler_X = load_scaler_X()
-scaler_y = load_scaler_y()
+
 
 # Use feature names directly from the scaler
 param_names = scaler_X.feature_names_in_.tolist()
 
+
 # Manually define descriptions and limits
 descriptions = [
-    "Systemdruck [MPa]",
-    "Verhältnis der Masse des aus dem RDB verlagerten Brennstoffs zur Gesamtmasse des Brennstoffs [-]",
-    "Porosität der Schüttung [-]",
-    "Mittlerer Partikeldurchmesser [mm]",
-    "Böschungswinkel der Schüttung [°]",
-    "Oberer Radius des Kegelstumpfs [m]",
-    "Anfangstemperatur der trockenen Schüttung [K]",
-    "Verhältnis der Nachzerfallsleistung zur thermischen Leistung im Nennalbetrieb [%]",
-    "Verhältnis der Masse verlagerten Hüllrohr- und Strukturmaterials zur Masse des aus dem RDB verlagerten Brennstoffs [-]"
+    "System pressure [MPa]",
+    "Ratio of the mass of fuel relocated from the reactor pressure vessel to the total mass of the fuel [-]",
+    "Porosity of the packed bed [-]",
+    "Mean particle diameter [mm]",
+    "Angle of repose of the packed bed [°]",
+    "Upper radius of the truncated cone [m]",
+    "Initial temperature of the dry packed bed [K]",
+    "Ratio of the decay heat to the thermal power during nominal operation [%]",
+    "Ratio of the mass of relocated cladding and structural material to the mass of fuel relocated from the reactor pressure vessel [-]"
 ]
 
 min_vals = [0.11, 0.5, 0.25, 1.0, 15.0, 0.0, 400.0, 0.3, 0.25]
-max_vals = [0.5, 1.0, 0.5, 5.0, 45.0, 2.0, 1700.0, 1.0, 2.0]
+max_vals = [0.5, 1.0, 0.5, 5.0, 45.0, 2.0, 1700.0, 1, 2.0]
 
 #Hedder 
 st.markdown("---")
 # add picture
-st.image("Logo_long.png", width=300) 
+st.title("Debris Bed AI: Prediction of Quench Behavior")
 
-st.title("Schüttbett-KI: Vorhersage des Quenchverhaltens")
 st.markdown("""
-### ℹ️ Anleitung
+### ℹ️ Instructions
 
-Verwenden Sie die Schieberegler auf der linken Seite, um die Parameter der Schüttung anzupassen.  
-Die Geometrie wird automatisch aktualisiert und rechts angezeigt.  
-Wenn eine Kühlung möglich ist, berechnet die Anwendung live eine Vorhersage der Quenchzeit mithilfe von KI-Modellen.
+Use the sliders on the left side to adjust the parameters of the debris bed.  
+The geometry will automatically update and be displayed on the right.  
+If a definitive conclusion can be reached, the application will calculate a live prediction of the quench or melting time using AI models.
 """)
 
-with st.expander("🛠️ Weitere Hilfe & Hintergrundinformationen"):
+with st.expander("🛠️ More Help & Background Information"):
     st.markdown("""
-- Die Vorhersagen basieren auf einem Ensemble aus mehreren neuronalen Netzen.
-- Die Eingabewerte werden automatisch normalisiert und in das KI-Modell eingespeist.
-- Ist eine Kühlung laut Klassifikator möglich, wird die zu erwartende Quenchzeit berechnet.
-- Die Unsicherheit der Vorhersage ergibt sich aus der Streuung der Ergebnisse aller Modelle.
-- Die Visualisierung zeigt sowohl die geometrische Anordnung der Schüttung als auch die Vorhersagegrafik.
-- Die App wurde für Forschungs- und Analysezwecke entwickelt und liefert keine sicherheitsrelevanten Bewertungen.
+- The predictions are based on an ensemble of multiple neural networks.
+- Input values are automatically normalized before being fed into the AI model.
+- If quenching or melting is predicted by the classifier, the NN is informed and the expected quench/melting time is calculated.
+- The prediction uncertainty is derived from the variation across all model results.
+- The visualization shows both the geometric arrangement of the debris bed and the prediction plot.
+- The app was developed for demonstration purposes does not provide safety-relevant assessments.
 
-Bei Fragen oder Feedback wenden Sie sich bitte an das Entwicklerteam.
+For questions or feedback, please contact the development team.
 """)
 st.markdown("---")
 
@@ -168,8 +173,8 @@ with col1:
    
 
     # Build sliders with manually defined parameters
-    user_inputs_scaled = []
-    st.markdown("### Startparameter des Schüttbetts:")
+    user_inputs = []
+    st.markdown("### Input parameters of the debris bed:")
     st.markdown("---")
     for i in range(len(param_names)):
 
@@ -183,13 +188,16 @@ with col1:
             format="%.2g"  # 2 significant figures
         )
 
-        # Manually scale to [0, 1]
-        scaled_val = (val - min_vals[i]) / (max_vals[i] - min_vals[i])
-        user_inputs_scaled.append(scaled_val)
+        user_inputs.append(val)
 
-        # Optionally show scaled value
         
         #st.caption(f"Skalierter Wert: {scaled_val:.2f}")
+#apply min-max scaling
+#multiply the pressure by 1000000 to convert from MPa to Pa
+user_inputs[0] = user_inputs[0] * 1e6  # Convert MPa to Pa
+user_inputs[3] = user_inputs[3] / 1000.0  # Convert mm to m
+user_inputs[7] = user_inputs[7] /100.0  # Convert percentage to fraction
+user_inputs_scaled = scaler_X.transform([user_inputs])[0] #????? this fucked up the function -check it
 # Right column for geometry plot and prediction output
 with col2:
     # Compute geometry based on user inputs
@@ -204,124 +212,150 @@ with col2:
 
     # Plot geometry
     fig = plot_geometry(rDebris, zDebris)
-    st.markdown("### Geometrie der Schüttung")
+    st.markdown("### Geometry of the Debris Bed:")
     st.pyplot(fig)
     st.markdown("---")
     # ------------------------------------------------------------------------------
     # Load classifier model
     classifier = load_classifier()
     print(classifier.predict([user_inputs_scaled]))
-    if classifier.predict([user_inputs_scaled]) == 1:
-        st.markdown("### ✅ Kühlung möglich:")
+    prediction = classifier.predict([user_inputs_scaled])[0]
+    if prediction == 1:
+        st.markdown("### ♨️ Debris bed quenches after:")
+    elif prediction == 0:
+        st.markdown("### 🌡️ Debris bed will remelt after:")
+    elif prediction == 2:
+        st.markdown("### 🤔 Inconclusive: A definitive answer cannot be reached after 2 hours")
 
-        # Input vorbereiten und Vorhersagen durchführen
-        input_array = np.array(user_inputs_scaled).reshape(1, -1)
-        predictions = [model.predict(input_array)[0][0] for model in models]
-        print("Raw Predictions:", predictions)
-        if predictions and len(predictions) > 0:
-            avg = np.mean(predictions)
-            std = np.std(predictions)
-            scaled_avg = scaler_y.inverse_transform([[avg]])[0][0]
-            scaled_std = scaler_y.inverse_transform([[std]])[0][0]
-
-            # Umrechnung in Zeitformat
-            try:
-                predicted_duration = timedelta(seconds=scaled_avg)
-                uncertainty_duration = timedelta(seconds=scaled_std)
-
-                def format_timedelta(td):
-                    total_seconds = int(td.total_seconds())
-                    hours, remainder = divmod(total_seconds, 3600)
-                    minutes, seconds = divmod(remainder, 60)
-                    return f"{hours}h {minutes}m {seconds}s"
-
-                st.markdown(f"## Quenchzeit: {format_timedelta(predicted_duration)}")
-                #st.caption(f"Vorhersage der Quenchzeit: {scaled_avg:.2f} Sekunden")
-                st.markdown(f"### Unsicherheit: {format_timedelta(uncertainty_duration)}")
-                with st.expander("Was ist ein Unsicherheit?"):
-                    st.markdown("""
-                    Die Unsicherheit in den Vorhersagen stammt aus verschiedenen Quellen, darunter:
-                    - **Modellvariationen**: Unterschiedliche Modelle können auf die gleichen Eingabedaten auf verschiedene Weise reagieren.
-                    - **Datenunsicherheit**: Variationen und Unschärfen in den Eingangsdaten, wie Messfehler oder unvollständige Daten.
-                    - **Stochastische Prozesse**: Zufällige Schwankungen, die durch die intrinsische Natur der Systemdynamik verursacht werden.
-                    
-                    Die Unsicherheit wird durch die **Standardabweichung** der Vorhersagen der Modelle berechnet. Dies gibt an, wie stark die Modelle in ihren Vorhersagen variieren, und liefert so eine Schätzung für die Unsicherheit der Ensemble-Vorhersage.
-                    """)
-
-                # Plot erstellen
-                predictions = scaler_y.inverse_transform(np.array(predictions).reshape(-1, 1)).flatten()
-                # Define x labels and numeric positions
-                model_names = [f"Model {i+1}" for i in range(len(predictions))] 
-                def plot_ensemble_non_interactive():
-                    fig, ax = plt.subplots(figsize=(6, 4))
-                    
-                    # Plot the predictions
-                    ax.plot(predictions, marker='o', label='Vorhersage', color='b')
-                    
-                    # Add labels and title
-                    ax.set_title("Ensemble-Vorhersagen [s]", fontsize=14)
-                    #ax.set_xlabel("Modelle")
-                    ax.set_ylabel("Vorhersage der Quenchzeit [s]")
-                    ax.set_xticks(np.arange(len(model_names)))
-                    ax.set_xticklabels(model_names)
-                    
-                    # Add a legend
-                    ax.legend(loc='best')
-                    
-                    # Display a grid
-                    ax.grid(True)
-
-                    return fig
-
-                # Show the static plot in Streamlit
-                fig = plot_ensemble_non_interactive()
-                st.pyplot(fig)
-
-                # Help box with explanation
-                # Dropdown (Expander) for explanation with uncertainty and standard deviation
-                with st.expander("Was ist ein Ensemble?"):
-                    st.markdown("""
-                    Ein Ensemble kombiniert die Vorhersagen mehrerer Modelle, um die Vorhersage zu stabilisieren und zu verbessern.  
-                    Dies hilft, Fehler von Einzelmodellen zu reduzieren und robustere, verlässlichere Ergebnisse zu liefern.
-                    
-                    Ein Ensemble wird auch verwendet, um zu berechnen, wie sicher das Modell in seiner Vorhersage ist.  
-                    Dies geschieht durch die Analyse der Variation der Vorhersagen zwischen den einzelnen Modellen. Eine größere Variation deutet auf eine höhere Unsicherheit hin, während eine geringere Variation auf eine größere Zuversicht des Modells hinweist.
-                    """)
-            except Exception as e:
-                st.error(f"Fehler bei der Umrechnung der Vorhersage: {e}")
+    if prediction in (0, 1):
+        if not models:
+            st.info("No Keras models found (model_*.keras). Skipping time prediction.")
         else:
-            st.warning("⚠️ Keine gültigen Vorhersagen verfügbar. Bitte Eingaben überprüfen.")
+            # Augment input with class flag as in training
+            cls = [0, 1] if prediction == 1 else [1, 0]
 
-    else:
-        st.markdown("### 🚫 Kühlung nicht möglich, Schüttbett schmilzt wieder")
+            # Input vorbereiten und Vorhersagen durchführen
+            input_array = np.array(user_inputs_scaled).reshape(1, -1)
+
+            # convert cls to shape (1,2) and concatenate
+            cls_array = np.array(cls).reshape(1, -1)
+            input_array = np.concatenate([input_array, cls_array], axis=1)
+            #print the input shape and values
+
+
+            predictions = [model.predict(input_array)[0][0] for model in models]
+           
+            avg = inverse_scaler_y(np.mean(predictions))
+            
+            print("Raw Predictions:", predictions)
+            if predictions and len(predictions) > 0:
+                avg = np.mean(predictions)
+                scaled_avg = inverse_scaler_y([[avg]])[0][0]
+                
+                #scale each prediction to real units
+                real_preds = inverse_scaler_y(np.array(predictions).reshape(-1, 1)).flatten()
+                # Compute mean and standard deviation in real units
+                avg_real = np.mean(real_preds)
+                std_real = np.std(real_preds)
+                # time format
+                try:
+                    predicted_duration = timedelta(seconds=float(scaled_avg))
+                    uncertainty_duration = timedelta(seconds=float(std_real))
+
+                    def format_timedelta(td):
+                        total_seconds = int(td.total_seconds())
+                        hours, remainder = divmod(total_seconds, 3600)
+                        minutes, seconds = divmod(remainder, 60)
+                        return f"{hours}h {minutes}m {seconds}s"
+
+                    st.markdown(f"## {format_timedelta(predicted_duration)}")
+                    #st.caption(f"Vorhersage der Quenchzeit: {scaled_avg:.2f} Sekunden")
+                    st.markdown(f"### Uncertainty: {format_timedelta(uncertainty_duration)}")
+                    with st.expander("What is Uncertainty?"):
+                        st.markdown("""
+                        The uncertainty in the predictions comes from several sources, including:
+                        - **Model variations**: Different models may respond to the same input data in different ways.
+                        - **Data uncertainty**: Variations and inaccuracies in the input data, such as measurement errors or incomplete data.
+                        - **Stochastic processes**: Random fluctuations caused by the intrinsic nature of the system dynamics.
+                        
+                        The uncertainty is calculated using the **standard deviation** of the models' predictions.  
+                        This indicates how much the models vary in their outputs and thus provides an estimate of the uncertainty of the ensemble prediction.
+                        """)
+
+
+                    # Plot erstellen
+                    predictions = inverse_scaler_y(np.array(predictions).reshape(-1, 1)).flatten()
+                    # Define x labels and numeric positions
+                    model_names = [f"Model {i+1}" for i in range(len(predictions))] 
+                    def plot_ensemble_non_interactive():
+                        fig, ax = plt.subplots(figsize=(6, 4))
+                        
+                        # Plot the predictions
+                        ax.plot(predictions, marker='o', label='Prediction', color='b')
+                        
+                        # Add labels and title
+                        ax.set_title("Ensemble-Prediction [s]", fontsize=14)
+                        #ax.set_xlabel("Modelle")
+                        ax.set_ylabel("End time [s]")
+                        ax.set_xticks(np.arange(len(model_names)))
+                        ax.set_xticklabels(model_names)
+                        
+                        # Add a legend
+                        ax.legend(loc='best')
+                        
+                        # Display a grid
+                        ax.grid(True)
+
+                        return fig
+
+                    # Show the static plot in Streamlit
+                    fig = plot_ensemble_non_interactive()
+                    st.pyplot(fig)
+
+                    # Help box with explanation
+                    # Dropdown (Expander) for explanation with uncertainty and standard deviation
+                    with st.expander("What is an Ensemble?"):
+                        st.markdown("""
+                        An ensemble combines the predictions of several models to stabilize and improve the overall prediction.  
+                        This helps reduce errors from individual models and provides more robust and reliable results.
+                        
+                        An ensemble is also used to calculate how confident the model is in its prediction.  
+                        This is done by analyzing the variation between the predictions of the individual models.  
+                        Greater variation indicates higher uncertainty, while smaller variation indicates greater confidence in the model’s prediction.
+                        """)
+                except OverflowError:
+                    st.error("The predicted quench time is too large to be represented.")
+                    
+
+
 
 # --- Footer ---
 st.markdown("---")
 st.markdown("""
 <div style='text-align: center; font-size: 0.9em;'>
-    <strong>Entwickelt von:</strong> Jasmin Joshi-Thompson, Universität Stuttgart, Institut für Kernenergetik und Energiesysteme (IKE), 2025 <br>
-    <strong>Kontakt:</strong> Jasmin.Joshi-Thompson@ike.uni-stuttgart.de <br>
-    <strong>Version:</strong> 1.0 – Stand: April 2025<br><br>
-    <em>Diese App nutzt KI-Modelle zur Live-Vorhersage von Quenchzeiten.</em><br>
+    <strong>Developed by:</strong> Jasmin Joshi-Thompson, University of Stuttgart, Institute for Nuclear Energy and Energy Systems (IKE), 2025 <br>
+    <strong>Contact:</strong> Jasmin.Joshi-Thompson@ike.uni-stuttgart.de <br>
+    <strong>Version:</strong> 2.0 – Last updated: August 2025<br><br>
+    <em>This app uses AI models for live prediction of quench and melting times.</em><br>
 </div>
 """, unsafe_allow_html=True)
 
-# Add the expander for the Hinweis information
-with st.expander("Hinweis"):
+# Add the expander for the reference information
+with st.expander("Note"):
     st.markdown("""
-    Dieses KI-Modell wurde mit Simulationsdaten aus **COCOMO** (Corium Coolability Model) vortrainiert,  
-    basierend auf früheren Arbeiten, die auf der **NENE-Konferenz** veröffentlicht wurden [1].  
-    Die Simulationsdaten wurden anhand experimenteller Daten aus der **FLOAT-Versuchsanlage** [2] validiert.  
-    COCOMO wurde am **Institut für Kernenergetik und Energiesysteme (IKE)** der **Universität Stuttgart** entwickelt [3].
+    This AI model was pre-trained with simulation data from **COCOMO** (Corium Coolability Model),  
+    based on work published at the **NENE Conference 2025**, following the work from **NENE 2024** [1].  
+    The simulation data was validated against experimental data from the **FLOAT test facility** [2].  
+    COCOMO was developed at the **Institute for Nuclear Energy and Energy Systems (IKE)** at the **University of Stuttgart** [3].
     
-    **Referenzen:**  
-    [1] Joshi-Thompson, J., Buck, M., und Starflinger, J., „Application of AI Methods for Describing the Coolability of Debris Beds Formed in the Late Accident Phase of Nuclear Reactors“,  
-    *Proceedings of the 33rd International Conference Nuclear Energy for New Europe (NENE 2024)*, Portorož, Slowenien, 9.–12. September 2024.
+    **References:**  
+    [1] Joshi-Thompson, J., Buck, M., and Starflinger, J., "Application of AI Methods for Describing the Coolability of Debris Beds Formed in the Late Accident Phase of Nuclear Reactors",  
+    *Proceedings of the 33rd International Conference Nuclear Energy for New Europe (NENE 2024)*, Portorož, Slovenia, September 9–12, 2024.
 
-    [2] M. Petroff, R. Kulenovic, und J. Starflinger, „Experimental investigation on debris bed quenching with additional non-condensable gas injection“,  
+    [2] M. Petroff, R. Kulenovic, and J. Starflinger, "Experimental investigation on debris bed quenching with additional non-condensable gas injection",  
     *Journal of Nuclear Engineering and Radiation Science*, NERS-21-1028, 2022.
 
-    [3] Buck, M., und Pohlner, G., „Ex-Vessel Debris Bed Formation and Coolability – Challenges and Chances for Severe Accident Mitigation“,  
-    *Proceedings of the International Congress on Advances in Nuclear Power Plants (ICAPP 2016)*, San Francisco, USA, 17.–20. April 2016.
+    [3] Buck, M., and Pohlner, G., "Ex-Vessel Debris Bed Formation and Coolability – Challenges and Chances for Severe Accident Mitigation",  
+    *Proceedings of the International Congress on Advances in Nuclear Power Plants (ICAPP 2016)*, San Francisco, USA, April 17–20, 2016.
     """, unsafe_allow_html=True)
 
