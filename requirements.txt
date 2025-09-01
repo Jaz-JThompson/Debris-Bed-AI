@@ -1,3 +1,4 @@
+streamlit
 absl-py==2.2.2
 scikit-learn==1.5.2
 tensorflow==2.20.0
