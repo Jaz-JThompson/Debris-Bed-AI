@@ -1,7 +1,8 @@
 streamlit==1.37.0
-tensorflow==2.20.0
-keras==3.11.3
+tensorflow==2.15.0
+keras==2.15.0
 ml-dtypes==0.2.0
+rich>=10.14.0
 protobuf<5
 h5py==3.10.0
 numpy==1.26.4
