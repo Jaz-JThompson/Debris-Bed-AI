@@ -10,9 +10,13 @@ from datetime import timedelta
 import plotly.graph_objects as go
 import matplotlib.pyplot as plt
 import keras
+import sys
 st.write("TensorFlow version:", tf.__version__)
 st.write("Keras version:", keras.__version__)
-
+st.write("Python version:", sys.version)
+print("Python:", sys.version)
+print("TensorFlow:", tf.__version__)
+print("Keras:", keras.__version__)
 
 def compute_geometry(Mfuel, Ffuel, Fstruct, Porosity, Rflat, Alpha):
     Pi = 4.0 * np.arctan(1.0)
@@ -97,14 +101,35 @@ warnings.filterwarnings("ignore", message=".*does not have valid feature names.*
 
 @st.cache_resource
 def load_models():
-    base_dir = os.path.dirname(__file__)  # script directory
+    """
+    Dynamically loads all models in the current directory that match:
+    - SavedModel folder (any directory containing 'saved_model.pb')
+    - Keras .keras files
+    Returns a list of loaded models.
+    """
+    base_dir = os.path.dirname(__file__)
     models = []
-    for i in range(1, 5):  # 1 to 6
-        path = os.path.join(base_dir, f"model_{i}.keras")
-        if os.path.exists(path):
-            models.append(tf.keras.models.load_model(path, compile=False))
-        else:
-            st.warning(f"Model file not found: {path}")
+
+    # Scan files/folders in base_dir
+    for name in os.listdir(base_dir):
+        path = os.path.join(base_dir, name)
+
+        # SavedModel folder format
+        if os.path.isdir(path) and "saved_model.pb" in os.listdir(path):
+            try:
+                models.append(tf.keras.models.load_model(path, compile=False))
+            except Exception as e:
+                st.warning(f"Failed to load SavedModel folder {name}: {e}")
+
+        # Single-file Keras format
+        elif os.path.isfile(path) and path.endswith(".keras"):
+            try:
+                models.append(tf.keras.models.load_model(path, compile=False))
+            except Exception as e:
+                st.warning(f"Failed to load Keras file {name}: {e}")
+
+    if not models:
+        st.error("No models found in the app directory!")
     return models
 
 def load_classifier():
