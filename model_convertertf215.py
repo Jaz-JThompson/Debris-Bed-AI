@@ -1,22 +1,32 @@
 import tensorflow as tf
-from tensorflow.keras.models import load_model, Sequential
 import os
+import shutil
 
-# Safety check: run only in TF 2.15
-if tf.__version__ != "2.15.0":
-    raise RuntimeError(f"Script must be run in TensorFlow 2.15, found {tf.__version__}")
+# Check TensorFlow version first
+if not tf.__version__.startswith("2.15"):
+    raise RuntimeError(f"Script requires TensorFlow 2.15, found {tf.__version__}")
 
-# Paths to old models
-old_model_paths = [f"model_{i+1}.keras" for i in range(5)]
-new_model_paths = [f"model_new_{i+1}.keras" for i in range(5)]
+# Original model filenames
+original_models = [f"model_{i+1}.keras" for i in range(5)]
 
-for old_path, new_path in zip(old_model_paths, new_model_paths):
-    print(f"Processing {old_path} → {new_path}")
+# Folder for converted models
+converted_dir = "converted_models"
+os.makedirs(converted_dir, exist_ok=True)
 
-    # Load original model without compiling
-    old_model = load_model(old_path, compile=False)
+for model_file in original_models:
+    if not os.path.exists(model_file):
+        print(f"Warning: {model_file} not found, skipping.")
+        continue
 
-    # Save in TF 2.20 compatible format by re-saving
-    # This avoids manually reconstructing layers
-    old_model.save(new_path)
-    print(f"Saved safely as {new_path}")
+    print(f"Loading {model_file} ...")
+    model = tf.keras.models.load_model(model_file, compile=False)
+
+    # Optional: recompile with the same settings (ensures no TF 2.15-only objects remain)
+    optimizer = tf.keras.optimizers.Nadam(learning_rate=0.00183)
+    model.compile(optimizer=optimizer, loss="mse")
+
+    new_model_file = os.path.join(converted_dir, "model_new_" + os.path.basename(model_file))
+    print(f"Saving converted model to {new_model_file} ...")
+    model.save(new_model_file)
+
+print("All models converted safely. Originals are untouched.")
