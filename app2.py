@@ -97,7 +97,15 @@ warnings.filterwarnings("ignore", message=".*does not have valid feature names.*
 
 @st.cache_resource
 def load_models():
-    return [tf.keras.models.load_model(f"model_{i}.keras", compile=False) for i in range(6) if os.path.exists(f"model_{i}.keras")]
+    base_dir = os.path.dirname(__file__)  # directory where app2.py lives
+    models = []
+    for i in range(6):
+        path = os.path.join(base_dir, f"model_{i}.keras")
+        if os.path.exists(path):
+            models.append(tf.keras.models.load_model(path, compile=False))
+        else:
+            st.warning(f"Model file not found: {path}")
+    return models
 
 def load_classifier():
     # Load the saved model
