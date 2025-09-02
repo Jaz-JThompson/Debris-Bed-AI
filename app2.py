@@ -11,13 +11,7 @@ import plotly.graph_objects as go
 import matplotlib.pyplot as plt
 import keras
 import sys
-'''st.write("TensorFlow version:", tf.__version__)
-st.write("Keras version:", keras.__version__)
-st.write("Python version:", sys.version)
-print("Python:", sys.version)
-print("TensorFlow:", tf.__version__)
-print("Keras:", keras.__version__)
-'''
+
 
 def compute_geometry(Mfuel, Ffuel, Fstruct, Porosity, Rflat, Alpha):
     Pi = 4.0 * np.arctan(1.0)
