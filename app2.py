@@ -97,9 +97,9 @@ warnings.filterwarnings("ignore", message=".*does not have valid feature names.*
 
 @st.cache_resource
 def load_models():
-    base_dir = os.path.dirname(__file__)  # directory where app2.py lives
+    base_dir = os.path.dirname(__file__)  # script directory
     models = []
-    for i in range(6):
+    for i in range(1, 5):  # 1 to 6
         path = os.path.join(base_dir, f"model_{i}.keras")
         if os.path.exists(path):
             models.append(tf.keras.models.load_model(path, compile=False))
