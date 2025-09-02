@@ -1,22 +1,23 @@
-import tensorflow as tf
-from tensorflow import keras
 import os
+import tensorflow as tf
 
-# List your original models
-model_files = ["model_1.keras", "model_2.keras", "model_3.keras", "model_4.keras", "model_5.keras"]
+# Directory containing your current .keras files
+source_dir = "converted_models"  # adjust if different
+# Directory to save the new SavedModel folders
+target_dir = "models_saved"
 
-# Create output directory for new models
-os.makedirs("converted_models", exist_ok=True)
+os.makedirs(target_dir, exist_ok=True)
 
-for f in model_files:
-    # Load original model
-    model = keras.models.load_model(f)
+# Find all .keras files
+keras_files = sorted([f for f in os.listdir(source_dir) if f.endswith(".keras")])
+
+for file in keras_files:
+    model_path = os.path.join(source_dir, file)
+    model = tf.keras.models.load_model(model_path, compile=False)
     
-    # Create new filename
-    name = os.path.splitext(os.path.basename(f))[0]
-    new_name = f"model_new_{name}.keras"
-    out_path = os.path.join("converted_models", new_name)
-    
-    # Save as new .keras file
-    model.save(out_path)
-    print(f"✅ Saved new model: {out_path}")
+    # Save as a folder (SavedModel format)
+    folder_name = os.path.splitext(file)[0]  # e.g., "model_1"
+    save_path = os.path.join(target_dir, folder_name)
+    model.save(save_path)
+    print(f"Saved {file} -> {save_path}")
+print("All models converted to SavedModel format.")

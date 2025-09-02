@@ -101,35 +101,22 @@ warnings.filterwarnings("ignore", message=".*does not have valid feature names.*
 
 @st.cache_resource
 def load_models():
-    """
-    Dynamically loads all models in the current directory that match:
-    - SavedModel folder (any directory containing 'saved_model.pb')
-    - Keras .keras files
-    Returns a list of loaded models.
-    """
-    base_dir = os.path.dirname(__file__)
+
+    base_dir = os.path.join(os.path.dirname(__file__), "models_saved")
     models = []
 
-    # Scan files/folders in base_dir
-    for name in os.listdir(base_dir):
-        path = os.path.join(base_dir, name)
-
-        # SavedModel folder format
-        if os.path.isdir(path) and "saved_model.pb" in os.listdir(path):
+    for i in range(1, 6):  # adjust based on your model numbers
+        path = os.path.join(base_dir, f"model_new_model_{i}")
+        if os.path.exists(path):
             try:
                 models.append(tf.keras.models.load_model(path, compile=False))
             except Exception as e:
-                st.warning(f"Failed to load SavedModel folder {name}: {e}")
-
-        # Single-file Keras format
-        elif os.path.isfile(path) and path.endswith(".keras"):
-            try:
-                models.append(tf.keras.models.load_model(path, compile=False))
-            except Exception as e:
-                st.warning(f"Failed to load Keras file {name}: {e}")
+                st.warning(f"Failed to load model {path}: {e}")
+        else:
+            st.warning(f"Model folder not found: {path}")
 
     if not models:
-        st.error("No models found in the app directory!")
+        st.error("No models found in models_saved!")
     return models
 
 def load_classifier():
