@@ -11,12 +11,13 @@ import plotly.graph_objects as go
 import matplotlib.pyplot as plt
 import keras
 import sys
-st.write("TensorFlow version:", tf.__version__)
+'''st.write("TensorFlow version:", tf.__version__)
 st.write("Keras version:", keras.__version__)
 st.write("Python version:", sys.version)
 print("Python:", sys.version)
 print("TensorFlow:", tf.__version__)
 print("Keras:", keras.__version__)
+'''
 
 def compute_geometry(Mfuel, Ffuel, Fstruct, Porosity, Rflat, Alpha):
     Pi = 4.0 * np.arctan(1.0)
@@ -163,15 +164,20 @@ max_vals = [0.5, 1.0, 0.5, 5.0, 45.0, 2.0, 1700.0, 1, 2.0]
 
 #Hedder 
 st.markdown("---")
+#Hedder 
+
 # add picture
-st.title("Debris Bed AI: Prediction of Quench Behavior")
+st.image("Logo_long.png", width=300) 
+# add picture
+st.markdown("---")
+st.title("Debris Bed AI V2.0")
 
 st.markdown("""
 ### ℹ️ Instructions
-
-Use the sliders on the left side to adjust the parameters of the debris bed.  
-The geometry will automatically update and be displayed on the right.  
-If a definitive conclusion can be reached, the application will calculate a live prediction of the quench or melting time using AI models.
+This app predicts the quench or melting time of a debris bed formed in a severe accident in a light water reactor.
+- Use the sliders on the left side to adjust the parameters of the debris bed.  
+- The geometry will automatically update and be displayed on the right.  
+- If a definitive conclusion can be reached, the application will calculate a live prediction of the quench or melting time using AI models.
 """)
 
 with st.expander("🛠️ More Help & Background Information"):
