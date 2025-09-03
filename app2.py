@@ -243,12 +243,21 @@ with col2:
     classifier = load_classifier()
     print(classifier.predict([user_inputs_scaled]))
     prediction = classifier.predict([user_inputs_scaled])[0]
+    probabilities = classifier.predict_proba([user_inputs_scaled])
+    certainty = np.max(probabilities)
+    predicted_class = np.argmax(probabilities)
+    certainty_percent = int(certainty * 100)
+    # Display in Streamlit
+    #st.markdown(f"#### Predicted Class: {predicted_class} (Certainty: {certainty_percent}%)")
     if prediction == 1:
-        st.markdown("### ♨️ Debris bed quenches after:")
+        st.markdown(f"### ♨️ Debris bed quenches (Certainty: {certainty_percent}%)")
+        st.markdown("### ⏳ Predicted Quench Time:")
     elif prediction == 0:
-        st.markdown("### 🌡️ Debris bed will remelt after:")
+        st.markdown(f"### 🌡️ Debris bed will remelt (Certainty: {certainty_percent}%)")
+        st.markdown("### ⏳ Predicted time until melting:")
     elif prediction == 2:
-        st.markdown("### 🤔 Inconclusive: A definitive answer cannot be reached after 2 hours")
+        st.markdown(f"### 🤔 Inconclusive (Certainty: {certainty_percent}%) ")
+        st.markdown("### ⏳ A definitive answer cannot be reached after 2 hours.")
 
     if prediction in (0, 1):
         if not models:
@@ -270,7 +279,7 @@ with col2:
            
             avg = inverse_scaler_y(np.mean(predictions))
             
-            print("Raw Predictions:", predictions)
+            #print("Raw Predictions:", predictions)
             if predictions and len(predictions) > 0:
                 avg = np.mean(predictions)
                 scaled_avg = inverse_scaler_y([[avg]])[0][0]
