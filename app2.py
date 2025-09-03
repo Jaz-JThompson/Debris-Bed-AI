@@ -342,8 +342,8 @@ with col2:
                         An ensemble combines the predictions of several models to stabilize and improve the overall prediction.  
                         This helps reduce errors from individual models and provides more robust and reliable results.
                         
-                        An ensemble is also used to calculate how confident the model is in its prediction.  
-                        This is done by analyzing the variation between the predictions of the individual models.  
+                        The final prediction is the average of all individual model predictions and the standard deviation indicates the uncertainty of the ensemble prediction.                        
+                         
                         Greater variation indicates higher uncertainty, while smaller variation indicates greater confidence in the model’s prediction.
                         """)
                 except OverflowError:
